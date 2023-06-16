@@ -1,6 +1,8 @@
 import User from "src/models/User";
 import {createToken} from "src/jwt";
-import {compare} from "src/hash";
+import {compare, makeHash} from "src/hash";
+import formidable from "formidable";
+import imageKitUpload from "src/services/ImageKitUpload";
 
 
 export const login = async (req, res, next) => {
@@ -30,3 +32,71 @@ export const login = async (req, res, next) => {
         next(ex);
     }
 };
+
+
+export const createNewUser = (req, res, next) => {
+    // parse a file upload
+    const form = formidable({multiples: false});
+
+    form.parse(req, async (err, fields, files) => {
+        if (err) return next("Can't read form data");
+        try {
+            const {
+                firstName,
+                lastName,
+                email,
+                password,
+            } = fields;
+
+            let user = await User.findOne({email});
+            if (user) {
+                return res.status(404).json({message: "Your are already registered"});
+            }
+
+            let avatarUrl = "";
+
+            if (files && files.avatar) {
+                let fileName = files.avatar.newFilename + "-" + files.avatar.originalFilename
+                let uploadInfo = await imageKitUpload(files.avatar.filepath, fileName, "hotel-booking")
+                if (uploadInfo) {
+                    avatarUrl = uploadInfo.url
+                }
+            }
+
+            let hash = makeHash(password);
+
+            let newUser = new User({
+                firstName,
+                lastName,
+                fullName: firstName + (lastName ? (" " + lastName) : ""),
+                role: "CUSTOMER",
+                email: email,
+                password: hash,
+                avatar: avatarUrl
+            });
+
+            newUser = await newUser.save();
+            if (!newUser) {
+                let error = new Error("Registration fail. please try again")
+                return next(error)
+            }
+
+            let {password: s, ...other} = newUser;
+
+            let token = await createToken(newUser._id, newUser.email, newUser.role);
+
+            res.status(201).json({user: other, token});
+
+        } catch (ex) {
+            if (ex.type === "VALIDATION_ERROR") {
+                next(ex.errors);
+            } else if (ex.type === "ER_DUP_ENTRY") {
+                next("user already exists");
+            } else {
+                next(ex);
+            }
+        }
+    });
+};
+
+

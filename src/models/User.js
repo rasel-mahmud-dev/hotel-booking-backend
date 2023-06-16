@@ -11,8 +11,8 @@ class User extends Base {
     constructor({
                     firstName,
                     lastName,
-                    googleId = null,
-                    role = "USER",
+
+                    role = "CUSTOMER",
                     email,
                     fullName,
                     password,
