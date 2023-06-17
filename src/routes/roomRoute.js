@@ -1,13 +1,12 @@
-
 import requiredAuth from "src/middewares/requiredAuth";
 import requiredRoles from "src/middewares/requiredRoles";
-import {createRoom, filterRooms, reserveRoom, checkInReserve, checkOutReserve} from "src/controllers/roomContoller";
+import {checkInReserve, checkOutReserve, createRoom, filterRooms, reserveRoom} from "src/controllers/roomContoller";
 
 const router = require("express").Router();
 
 // only admin and hotel owner can add room
 router.post("/create", requiredAuth, requiredRoles(["ADMIN", "HOTEL_OWNER"]), createRoom);
-router.post("/filter", requiredAuth, filterRooms);
+router.post("/filter",  filterRooms);
 
 
 // confirm reserve/book room  
@@ -18,9 +17,8 @@ router.post("/checkIn", requiredAuth, checkInReserve);
 
 
 // when guest leave their room. 
-// then it's mandatory to checkOut unless pay for next day
+// then it's mandatory to check out unless pay for next day
 router.post("/checkOut", requiredAuth, checkOutReserve);
-
 
 
 export default router

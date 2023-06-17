@@ -3,7 +3,7 @@ import imageKitUpload from "src/services/ImageKitUpload";
 import Hotel from "src/models/Hotel";
 import {ObjectId} from "mongodb";
 import Room from "src/models/Room";
-
+import Booking from "src/models/Booking";
 
 
 export const createRoom = (req, res, next) => {
@@ -16,10 +16,11 @@ export const createRoom = (req, res, next) => {
         if (err) return next("Can't read form data");
         try {
             const {
+                roomName,
                 roomNo,
                 hotelId,
                 roomType,
-                description ,
+                description,
                 capacity = 1,
                 image = "",
                 price,
@@ -30,7 +31,7 @@ export const createRoom = (req, res, next) => {
             let imageUrl = "";
 
             // check this hotel is created current logged user or not
-            if(!hotelId){
+            if (!hotelId) {
                 return next("Please select your hotel")
             }
 
@@ -38,7 +39,7 @@ export const createRoom = (req, res, next) => {
                 _id: new ObjectId(hotelId),
                 ownerId: new ObjectId(req.user._id)
             })
-            if(!hotel) {
+            if (!hotel) {
                 return next("Please select your created hotel")
             }
 
@@ -55,6 +56,7 @@ export const createRoom = (req, res, next) => {
                 description,
                 image: imageUrl ? imageUrl : image,
                 roomNo,
+                roomName,
                 hotelId: new ObjectId(hotelId),
                 roomType,
                 capacity,
@@ -79,52 +81,65 @@ export const createRoom = (req, res, next) => {
 };
 
 
-export const filterRooms = async (req, res, next)=>{
-    try{
+export const filterRooms = async (req, res, next) => {
+    try {
 
-        const {
-            search, 
-            price = [], 
-            roomType, 
-            capacity, 
+        let {
+            search,
+            checkInDate = new Date(),
+            checkOutDate,
+            roomType,
+            capacity,
             city,
-            bookingStartDate,
         } = req.body
 
-    
+        checkInDate = new Date(checkInDate)
+        checkOutDate = new Date(checkOutDate)
 
-        let filterPrice = []
-        if(price && Array.isArray(price) && price.length === 2){
-            filter["price"] = [{ $gte: price[0] }]
-            filter["price"].push({ $lte: price[1] })
-        }
-        if(roomType){
-            filterPrice.push({roomType})
-        }
-        if(capacity){
-            filterPrice.push({capacity})
-        }
-        if(city){
-            filterPrice.push({city: city})
-        }
-        let orFilter = []
 
-        // search via room name or hotel name 
-        if(search){
-            or.push({
-                roomName: { $regex: search },
-                roomNumber: { $regex: search },
-            })
+        let filter = []
+
+        if (roomType) {
+            filter.push({roomType})
+        }
+        if (capacity) {
+            filter.push({capacity})
+        }
+        if (city) {
+            filter.push({"hotel.address.city": city})
         }
 
-        let rooms  = await Room.aggregate([
+
+        let rooms = await Room.aggregate([
             {
-                $match: {
-                    // $and: filterPrice,
-                //  $or: orFilter
+                $lookup: {
+                    from: "booking",
+                    let: {roomId: "$_id"},
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        {$eq: ["$roomId", "$$roomId"]},
+                                        {
+                                            $and: [
+                                                {$lte: ["$checkInDate", checkInDate]},
+                                                {$gte: ["$checkOutDate", checkOutDate]}
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "bookings"
                 }
             },
-            
+            {
+                $match: {
+                    bookings: {$size: 0},
+                }
+            },
             {
                 $lookup: {
                     from: "hotels",
@@ -135,6 +150,17 @@ export const filterRooms = async (req, res, next)=>{
             },
             {
                 $unwind: {path: "$hotel"}
+            },
+            /*** match by room name or hoter name */
+            {
+                $match: {
+                    $or: [
+                        {roomName: new RegExp(search, 'i')},
+                        {"hotel.name": new RegExp(search, 'i')}
+                    ],
+                    $and: filter.length > 0 ? filter : [{}]
+
+                }
             },
             {
                 $lookup: {
@@ -151,18 +177,19 @@ export const filterRooms = async (req, res, next)=>{
                 $project: {
                     _id: 1,
                     roomName: 1,
+                    hotelId: 1,
                     roomNo: 1,
                     image: 1,
                     description: 1,
                     price: 1,
-                    roomType: 1, 
-                    capacity: 1, 
-                    city: 1,
+                    roomType: 1,
+                    capacity: 1,
                     hotel: {
                         name: 1,
+                        address: 1,
                         image: 1
                     },
-                    owner:{
+                    owner: {
                         fullName: 1,
                         avatar: 1
                     }
@@ -172,64 +199,108 @@ export const filterRooms = async (req, res, next)=>{
 
         res.status(200).json({rooms: rooms});
 
-    } catch(ex){
+    } catch (ex) {
+        console.log(ex)
         next(ex)
     }
 }
 
 
-export const reserveRoom = async (req, res, next)=>{
-    try{
-        const {
-            startDate, 
-            endDate, 
-            roomId
+export const reserveRoom = async (req, res, next) => {
+    try {
+        let {
+            roomId,
+            hotelId,
+            checkInDate,
+            checkOutDate,
+            totalPrice = 0,
+            status = "pending"
         } = req.body
 
+        if (!(roomId && hotelId)) {
+            return next("Please provide room id and hotel id")
+        }
+
+        checkInDate = new Date(checkInDate)
+        checkOutDate = new Date(checkOutDate)
 
 
-        res.status(200).json({rooms: rooms});
+        if (checkOutDate < checkInDate) {
+            return next("Check Out Date should be greater than check in date")
+        }
 
-    } catch(ex){
+        /*** compare check in check out date before booking room */
+        let booked = await Booking.find({
+            roomId: new ObjectId(roomId),
+            hotelId: new ObjectId(hotelId),
+            $and: [
+                {
+                    checkOutDate: {
+                        $lte: checkOutDate,
+                    },
+
+                },
+                {
+                    checkInDate: {
+                        $gte: checkInDate,
+                    },
+                }
+            ]
+        })
+
+        if (booked && booked.length > 0) {
+            return next("Sorry, This room already booked..")
+        }
+
+
+        let newBooking = new Booking({
+            roomId: new ObjectId(roomId),
+            userId: new ObjectId(req.user._id),
+            hotelId: new ObjectId(hotelId),
+            checkInDate,
+            checkOutDate,
+            totalPrice,
+            status: "confirmed" // it should be confirmed by admin
+        })
+        newBooking = await newBooking.save()
+        res.status(201).json({reserve: newBooking});
+
+    } catch (ex) {
         next(ex)
     }
 }
 
 
 // user can check their booked room by their email, room number or reserve id
-export const checkInReserve = async (req, res, next)=>{
-    try{
+export const checkInReserve = async (req, res, next) => {
+    try {
         const {
-            startDate, 
-            endDate, 
+            startDate,
+            endDate,
             roomId
         } = req.body
 
-        
 
         res.status(200).json({rooms: rooms});
 
-    } catch(ex){
+    } catch (ex) {
         next(ex)
     }
 }
 
 
-
-// when guest leave their room. 
+// when guest leave their room.
 // then it's mandatory to checkOut unless pay for next day
-export const checkOutReserve = async (req, res, next)=>{
-    try{
+export const checkOutReserve = async (req, res, next) => {
+    try {
         const {
             reserveId
-        } = req.body 
-
-        
+        } = req.body
 
 
         res.status(200).json({rooms: rooms});
 
-    } catch(ex){
+    } catch (ex) {
         next(ex)
     }
 }

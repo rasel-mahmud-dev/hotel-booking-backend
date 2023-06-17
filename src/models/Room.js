@@ -4,22 +4,24 @@ class Room extends Base {
     static collectionName = "rooms";
 
     static indexes = {
-        hotetId: {},
+        hotelId: {},
         roomName: {},
     }
 
     constructor({
-            description,
-            image,
-            roomNo,
-            hotelId,
-            roomType,
-            capacity,
-            price,
-        }) {
+                    description,
+                    image,
+                    roomNo,
+                    roomName,
+                    hotelId,
+                    roomType,
+                    capacity,
+                    price,
+                }) {
 
         super(Room.collectionName);
         this.roomNo = roomNo
+        this.roomName = roomName
         this.description = description
         this.image = image
         this.hotelId = hotelId

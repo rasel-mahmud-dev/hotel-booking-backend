@@ -1,5 +1,5 @@
 import Base from "./Base";
-import {ObjectId} from "mongodb";
+
 
 class Hotel extends Base {
     static collectionName = "hotels";

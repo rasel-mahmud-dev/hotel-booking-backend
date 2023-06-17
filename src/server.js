@@ -1,14 +1,10 @@
 import app from "./app/app"
 
-import Base from "src/models/Base"
+import indexesCollections from "src/models/indexesCollections";
 
 const PORT = process.env.PORT || 2000
 
 app.listen(PORT, () => {
-    Base.initialMongodbIndexes([]).then(()=>{
-        console.log("indexing")
-    }).catch(ex=>{
-        console.log(ex)
-    })
+    // indexesCollections()
     console.info("server is running on port: " + PORT)
 })
