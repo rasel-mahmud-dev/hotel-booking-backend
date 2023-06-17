@@ -1,12 +1,11 @@
 import express from "express"
 
 import cors from "cors"
+import routes from "../routes"
 
 require("dotenv").config({
     path: '.env'
 })
-
-import routes from "../routes"
 
 
 const app = express()
@@ -31,17 +30,17 @@ app.use(cors(corsOptions));
 app.use(routes)
 
 
-
 // global error handler middleware
 app.use((err, req, res, next) => {
     let message = "Internal error"
     if (typeof err === "string") {
         message = err
-    } else if (err?.message && typeof err?.message === "string") {
-        message = err?.message
+    } else if (err['message'] && typeof err['message'] === "string") {
+
+        message = err["message"]
     }
     if (err) {
-        res.status(500).json({ message })
+        res.status(500).json({message})
     }
 })
 

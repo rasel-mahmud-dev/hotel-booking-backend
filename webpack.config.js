@@ -48,7 +48,6 @@ module.exports = {
             {
                 test: /\.(?:js|mjs|cjs)$/,
                 exclude: /node_modules/,
-                type: 'asset/resource',
                 use: {
                     loader: 'babel-loader',
                     options: {

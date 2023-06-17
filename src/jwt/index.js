@@ -16,7 +16,7 @@ export const parseToken = (token) => {
     return new Promise(async (resolve, reject) => {
         try {
             if (token) {
-                let d = await jwt.verify(token, process.env.SECRET);
+                let d = await jwt.verify(token, process.env.JWT_SECRET);
                 resolve(d);
             } else {
                 reject(new Error("Token not found"));

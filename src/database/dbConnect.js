@@ -12,7 +12,7 @@ function dbConnect() {
         try {
             // we use mongodb client caching
             if(!database) {
-                database = (await clientPromise).db("social-app");
+                database = (await clientPromise).db("hotel-booking");
             }
             resolve({database, client})
         } catch (ex){

@@ -1,9 +1,11 @@
 import User from "src/models/User";
-import {createToken} from "src/jwt";
+import {createToken, parseToken} from "src/jwt";
 import {compare, makeHash} from "src/hash";
-import formidable from "formidable";
 import imageKitUpload from "src/services/ImageKitUpload";
+import getToken from "src/utils/getToken";
+import {ObjectId} from "mongodb";
 
+import {IncomingForm} from "formidable";
 
 export const login = async (req, res, next) => {
     try {
@@ -36,7 +38,7 @@ export const login = async (req, res, next) => {
 
 export const createNewUser = (req, res, next) => {
     // parse a file upload
-    const form = formidable({multiples: false});
+    const form = new IncomingForm({multiples: false});
 
     form.parse(req, async (err, fields, files) => {
         if (err) return next("Can't read form data");
@@ -45,6 +47,7 @@ export const createNewUser = (req, res, next) => {
                 firstName,
                 lastName,
                 email,
+                role="USER",
                 password,
             } = fields;
 
@@ -69,7 +72,7 @@ export const createNewUser = (req, res, next) => {
                 firstName,
                 lastName,
                 fullName: firstName + (lastName ? (" " + lastName) : ""),
-                role: "CUSTOMER",
+                role: role !== "ADMIN" ? role : "USER",
                 email: email,
                 password: hash,
                 avatar: avatarUrl
@@ -98,5 +101,35 @@ export const createNewUser = (req, res, next) => {
         }
     });
 };
+
+
+export const authLoad = async (req, res, next) => {
+
+    let token = getToken(req)
+
+    try {
+        let data = await parseToken(token)
+
+        if (!data) {
+            return res.status(409).json({message: "Please login first"})
+        }
+
+        let user = await User.findOne({_id: new ObjectId(data._id)})
+
+        if (!user) {
+            return res.status(409).json({message: "Please login first"})
+        }
+
+        user["password"] = null
+
+        res.status(201).json({
+            user,
+        })
+
+    } catch (ex) {
+        next(ex)
+    }
+}
+
 
 
