@@ -65,7 +65,7 @@ class Base {
                     }
                 })
             } catch (ex) {
-                // console.log(ex.message)
+                console.log(ex)
             }
         }))
 

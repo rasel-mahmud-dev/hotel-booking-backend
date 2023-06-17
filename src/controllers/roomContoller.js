@@ -5,6 +5,7 @@ import {ObjectId} from "mongodb";
 import Room from "src/models/Room";
 
 
+
 export const createRoom = (req, res, next) => {
 
     // parse a file upload
@@ -15,7 +16,7 @@ export const createRoom = (req, res, next) => {
         if (err) return next("Can't read form data");
         try {
             const {
-                roomName,
+                roomNo,
                 hotelId,
                 roomType,
                 description ,
@@ -53,7 +54,7 @@ export const createRoom = (req, res, next) => {
             let newRoomData = {
                 description,
                 image: imageUrl ? imageUrl : image,
-                roomName,
+                roomNo,
                 hotelId: new ObjectId(hotelId),
                 roomType,
                 capacity,
@@ -76,3 +77,102 @@ export const createRoom = (req, res, next) => {
         }
     });
 };
+
+
+export const filterRooms = async (req, res, next)=>{
+    try{
+
+        const {
+            search, 
+            price = [], 
+            roomType, 
+            capacity, 
+            city,
+            bookingStartDate,
+        } = req.body
+
+    
+
+        let filterPrice = []
+        if(price && Array.isArray(price) && price.length === 2){
+            filter["price"] = [{ $gte: price[0] }]
+            filter["price"].push({ $lte: price[1] })
+        }
+        if(roomType){
+            filterPrice.push({roomType})
+        }
+        if(capacity){
+            filterPrice.push({capacity})
+        }
+        if(city){
+            filterPrice.push({city: city})
+        }
+        let orFilter = []
+
+        // search via room name or hotel name 
+        if(search){
+            or.push({
+                roomName: { $regex: search },
+                roomNumber: { $regex: search },
+            })
+        }
+
+        let rooms  = await Room.aggregate([
+            {
+                $match: {
+                    // $and: filterPrice,
+                //  $or: orFilter
+                }
+            },
+            
+            {
+                $lookup: {
+                    from: "hotels",
+                    localField: "hotelId",
+                    foreignField: "_id",
+                    as: "hotel"
+                }
+            },
+            {
+                $unwind: {path: "$hotel"}
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "hotel.ownerId",
+                    foreignField: "_id",
+                    as: "owner"
+                }
+            },
+            {
+                $unwind: {path: "$owner"}
+            },
+            {
+                $project: {
+                    _id: 1,
+                    roomName: 1,
+                    roomNo: 1,
+                    image: 1,
+                    description: 1,
+                    price: 1,
+                    roomType: 1, 
+                    capacity: 1, 
+                    city: 1,
+                    hotel: {
+                        name: 1,
+                        image: 1
+                    },
+                    owner:{
+                        fullName: 1,
+                        avatar: 1
+                    }
+                }
+            }
+        ])
+
+        res.status(200).json({rooms: rooms});
+
+    } catch(ex){
+        next(ex)
+    }
+}

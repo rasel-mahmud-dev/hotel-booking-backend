@@ -8,6 +8,7 @@ import {ObjectId} from "mongodb";
 import formidable from "formidable";
 
 export const login = async (req, res, next) => {
+    console.log("HI")
     try {
         const {email, password} = req.body;
 

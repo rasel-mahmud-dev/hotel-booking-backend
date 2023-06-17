@@ -11,7 +11,7 @@ class Room extends Base {
     constructor({
             description,
             image,
-            roomName,
+            roomNo,
             hotelId,
             roomType,
             capacity,
@@ -19,7 +19,7 @@ class Room extends Base {
         }) {
 
         super(Room.collectionName);
-        this.roomName = roomName
+        this.roomNo = roomNo
         this.description = description
         this.image = image
         this.hotelId = hotelId

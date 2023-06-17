@@ -1,5 +1,5 @@
 import express from "express"
-
+// import morgan from "morgan"
 import cors from "cors"
 import routes from "../routes"
 
@@ -11,7 +11,12 @@ require("dotenv").config({
 const app = express()
 
 app.use(express.json())
+// app.use(morgan("dev"))
 
+app.use((req, res, next)=>{
+    console.log(req.url,  req.method);
+    next()
+})
 
 const allowedOrigin = [process.env.FRONTEND]
 
@@ -28,6 +33,8 @@ app.use(cors(corsOptions));
 
 // all route are initiated
 app.use(routes)
+
+
 
 
 // global error handler middleware
