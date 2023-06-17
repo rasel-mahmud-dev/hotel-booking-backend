@@ -176,3 +176,60 @@ export const filterRooms = async (req, res, next)=>{
         next(ex)
     }
 }
+
+
+export const reserveRoom = async (req, res, next)=>{
+    try{
+        const {
+            startDate, 
+            endDate, 
+            roomId
+        } = req.body
+
+
+
+        res.status(200).json({rooms: rooms});
+
+    } catch(ex){
+        next(ex)
+    }
+}
+
+
+// user can check their booked room by their email, room number or reserve id
+export const checkInReserve = async (req, res, next)=>{
+    try{
+        const {
+            startDate, 
+            endDate, 
+            roomId
+        } = req.body
+
+        
+
+        res.status(200).json({rooms: rooms});
+
+    } catch(ex){
+        next(ex)
+    }
+}
+
+
+
+// when guest leave their room. 
+// then it's mandatory to checkOut unless pay for next day
+export const checkOutReserve = async (req, res, next)=>{
+    try{
+        const {
+            reserveId
+        } = req.body 
+
+        
+
+
+        res.status(200).json({rooms: rooms});
+
+    } catch(ex){
+        next(ex)
+    }
+}
