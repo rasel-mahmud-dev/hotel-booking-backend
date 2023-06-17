@@ -5,24 +5,27 @@ class Room extends Base {
 
     static indexes = {
         hotetId: {},
-
+        roomName: {},
     }
 
     constructor({
-
-            price,
             description,
+            image,
+            roomName,
+            hotelId,
+            roomType,
             capacity,
-            hotetId,
-            roomType
+            price,
         }) {
 
         super(Room.collectionName);
-        this.roomType = roomType
-        this.price = price
+        this.roomName = roomName
         this.description = description
-        this.hotetId = hotetId;
-        this.capacity = capacity;
+        this.image = image
+        this.hotelId = hotelId
+        this.roomType = roomType
+        this.capacity = capacity
+        this.price = price
         this.createdAt = new Date();
         this.updatedAt = new Date();
     }

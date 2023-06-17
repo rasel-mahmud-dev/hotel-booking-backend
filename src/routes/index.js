@@ -1,6 +1,7 @@
 import { Router } from "express"
 import authRoute from "./authRoute";
 import hotelRoute from "src/routes/hotelRoute";
+import roomRoute from "src/routes/roomRoute";
 
 
 
@@ -18,6 +19,7 @@ router.get("/health", function (req, res){
 
 router.use("/api/auth", authRoute)
 router.use("/api/hotel", hotelRoute)
+router.use("/api/room", roomRoute)
 
 
 

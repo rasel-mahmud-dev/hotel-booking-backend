@@ -5,7 +5,7 @@ import imageKitUpload from "src/services/ImageKitUpload";
 import getToken from "src/utils/getToken";
 import {ObjectId} from "mongodb";
 
-import {IncomingForm} from "formidable";
+import formidable from "formidable";
 
 export const login = async (req, res, next) => {
     try {
@@ -38,7 +38,7 @@ export const login = async (req, res, next) => {
 
 export const createNewUser = (req, res, next) => {
     // parse a file upload
-    const form = new IncomingForm({multiples: false});
+    const form = formidable({multiples: false});
 
     form.parse(req, async (err, fields, files) => {
         if (err) return next("Can't read form data");

@@ -61,11 +61,6 @@ class Base {
                     for (let indexesKey in indexes) {
                         collection.createIndex([indexesKey], indexes[indexesKey], function (error, result) {
                             console.log(error, result)
-                            // if (a) {
-                            //     console.log(a.message)
-                            // } else {
-                            //     console.log(`${colItem.name} collection indexed completed`)
-                            // }
                         })
                     }
                 })
