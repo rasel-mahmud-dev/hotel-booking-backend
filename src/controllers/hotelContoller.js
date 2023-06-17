@@ -4,6 +4,47 @@ import Hotel from "src/models/Hotel";
 import {ObjectId} from "mongodb";
 
 
+function fetchHotelQuery(query = {}) {
+    return Hotel.aggregate([
+        {$match: query},
+        {
+            $lookup: {
+                from: "users",
+                localField: "ownerId",
+                foreignField: "_id",
+                as: "owner"
+            }
+        },
+        {
+            $unwind: {path: "$owner"}
+        },
+        {
+            $lookup: {
+                from: "rooms",
+                localField: "_id",
+                foreignField: "hotelId",
+                as: "rooms"
+            }
+        },
+        {
+            $sort: {
+                createdAt: -1
+            }
+        },
+        {
+            $project: {
+                owner: {
+                    password: 0,
+                    role: 0,
+                    createdAt: 0,
+                    updatedAt: 0,
+                    email: 0,
+                }
+            }
+        }
+    ])
+}
+
 export const createHotel = (req, res, next) => {
 
     // parse a file upload
@@ -63,21 +104,34 @@ export const createHotel = (req, res, next) => {
     });
 };
 
+
 export const getAllHotel = async (req, res, next) => {
     try {
-        const hotel = await Hotel.find({})
+        const hotel = await fetchHotelQuery({})
         res.status(200).json({hotel: hotel});
     } catch (ex) {
         next(ex);
     }
 }
+
+
+export const getOwnerHotel = async (req, res, next) => {
+    try {
+        const hotel = await Hotel.find({ownerId: new ObjectId(req.user._id)})
+        res.status(200).json({hotel: hotel, authId: req.user._id});
+    } catch (ex) {
+        next(ex);
+    }
+}
+
+
 export const getHotelDetail = async (req, res, next) => {
     try {
         const {type, hotelId} = req.query
-        if(!hotelId) return next("Please Provide hotel id")
+        if (!hotelId) return next("Please Provide hotel id")
         let hotel = null
 
-        if(type === "edit"){
+        if (type === "edit") {
             hotel = await Hotel.findOne({_id: new ObjectId(hotelId)})
         } else {
             // fetch detail like how many room have for his hotel
