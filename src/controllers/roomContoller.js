@@ -10,7 +10,6 @@ export const getRooms = async (req, res, next) => {
     try {
         const {type} = req.query
 
-        console.log(req.user.role)
 
         let filter = {}
         if (type && type === "owner") {
@@ -103,7 +102,7 @@ export const createRoom = (req, res, next) => {
 
         if (err) return next("Can't read form data");
         try {
-            const {
+            let {
                 roomName,
                 roomNo,
                 hotelId,
@@ -139,6 +138,10 @@ export const createRoom = (req, res, next) => {
                 }
             }
 
+            capacity = Number(capacity)
+            if (isNaN(capacity)) {
+                capacity = 1
+            }
 
             let newRoomData = {
                 description,
@@ -151,7 +154,6 @@ export const createRoom = (req, res, next) => {
                 price,
                 createdAt: new Date()
             }
-
             let result = await Room.updateOne({
                 _id: _id ? new ObjectId(_id) : new ObjectId()
             }, {
@@ -189,13 +191,13 @@ export const filterRooms = async (req, res, next) => {
         if (roomType) {
             filter.push({roomType})
         }
-        if (capacity) {
+        capacity = Number(capacity)
+        if (!isNaN(capacity) && capacity > 0) {
             filter.push({capacity})
         }
         if (city) {
             filter.push({"hotel.address.city": city})
         }
-
 
         let rooms = await Room.aggregate([
             {
@@ -496,6 +498,60 @@ export const checkOutReserve = async (req, res, next) => {
             booking: {
                 status: 'checked-out'
             }
+        });
+
+    } catch (ex) {
+        next(ex)
+    }
+}
+
+
+// get popular rooms
+export const getPopularRooms = async (req, res, next) => {
+    let {pageNumber = 1} = req.query
+    let pageSize = 10
+    pageNumber = Number(pageNumber)
+    if (isNaN(pageNumber)) {
+        pageNumber = 1
+    }
+
+    try {
+        let rooms = await Room.find({}, {
+            skip: pageSize * (pageNumber - 1),
+            limit: pageSize * pageNumber
+        })
+
+        res.status(200).json({
+            rooms: rooms
+        });
+
+    } catch (ex) {
+        next(ex)
+    }
+}
+
+// filter-by-type
+export const getFilterRoomByType = async (req, res, next) => {
+    let {pageNumber = 1, roomType} = req.query
+    let pageSize = 10
+    pageNumber = Number(pageNumber)
+    if (isNaN(pageNumber)) {
+        pageNumber = 1
+    }
+
+    const filter = {}
+    if (roomType) {
+        filter["roomType"] = roomType
+    }
+
+    try {
+        let rooms = await Room.find(filter, {
+            skip: pageSize * (pageNumber - 1),
+            limit: pageSize * pageNumber
+        })
+
+        res.status(200).json({
+            rooms: rooms
         });
 
     } catch (ex) {

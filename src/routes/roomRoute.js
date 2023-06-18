@@ -8,7 +8,7 @@ import {
     filterRooms,
     reserveRoom,
     getRoom,
-    getBookedRooms, cancelBookingRoom
+    getBookedRooms, cancelBookingRoom, getPopularRooms, getFilterRoomByType
 } from "src/controllers/roomContoller";
 
 const router = require("express").Router();
@@ -40,6 +40,13 @@ router.post("/booked-checkOut", requiredAuth, checkOutReserve);
 
 // cancel booking room
 router.post("/cancel-booking", requiredAuth, cancelBookingRoom);
+
+
+// get popular rooms
+router.post("/popular",  getPopularRooms);
+
+// get popular rooms
+router.get("/filter-by-type",  getFilterRoomByType);
 
 
 export default router

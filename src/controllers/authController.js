@@ -147,28 +147,11 @@ export const updateProfile = (req, res, next) => {
                 userId,
             } = fields;
 
-            let user = await User.findOne({_id: new ObjectId(req.user._id)});
-            if (!user) {
-                return res.status(404).json({message: "User not found"});
-            }
 
             let update = {}
             let errorMessage = ""
             if (avatar) update["avatar"] = avatar
             const newPhotos = []
-
-
-            if (files && files.avatar) {
-                let fileName = `${files.avatar.newFilename}-${files.avatar.originalFilename}`
-                let result = await imageKitUpload(files.avatar.filepath, fileName, "hotel-booking")
-                if (result) {
-                    update["avatar"] = result.url
-                    newPhotos.push(result.url)
-                } else {
-                    errorMessage = "Avatar upload fail"
-                }
-            }
-
 
             if (errorMessage) {
                 return next(errorMessage)
@@ -181,14 +164,28 @@ export const updateProfile = (req, res, next) => {
                 if (userId) {
                     filter["_id"] = new ObjectId(userId)
                 } else {
+                    let user = await User.findOne({_id: new ObjectId(req.user._id)});
+                    if (!user) {
+                        return res.status(404).json({message: "User not found"});
+                    }
                     filter["_id"] = new ObjectId(req.user._id)
                 }
                 if (status) update["status"] = status
                 if (isBlocked) update["isBlocked"] = isBlocked == "true"
-
+            } else {
+                filter["_id"] = new ObjectId(req.user._id)
             }
 
-            console.log(filter)
+            if (files && files.avatar) {
+                let fileName = `${files.avatar.newFilename}-${files.avatar.originalFilename}`
+                let result = await imageKitUpload(files.avatar.filepath, fileName, "hotel-booking")
+                if (result) {
+                    update["avatar"] = result.url
+                    newPhotos.push(result.url)
+                } else {
+                    errorMessage = "Avatar upload fail"
+                }
+            }
 
             await User.updateOne(filter, {
                 $set: update
