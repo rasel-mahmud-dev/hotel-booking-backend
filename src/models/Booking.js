@@ -1,7 +1,7 @@
 import Base from "src/models/Base";
 
 class Booking extends Base {
-    static collectionName = "";
+    static collectionName = "booking";
 
     static indexes = {
         userId: {},

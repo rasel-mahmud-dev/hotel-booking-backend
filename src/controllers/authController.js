@@ -8,7 +8,6 @@ import {ObjectId} from "mongodb";
 import formidable from "formidable";
 
 export const login = async (req, res, next) => {
-    console.log("HI")
     try {
         const {email, password} = req.body;
 
@@ -143,6 +142,9 @@ export const updateProfile = (req, res, next) => {
         try {
             const {
                 avatar,
+                status,
+                isBlocked,
+                userId,
             } = fields;
 
             let user = await User.findOne({_id: new ObjectId(req.user._id)});
@@ -172,9 +174,23 @@ export const updateProfile = (req, res, next) => {
                 return next(errorMessage)
             }
 
-            await User.updateOne({
-                _id: new ObjectId(req.user._id)
-            }, {
+
+            let filter = {}
+            // admin user can these for any users
+            if (req.user.role === "ADMIN") {
+                if (userId) {
+                    filter["_id"] = new ObjectId(userId)
+                } else {
+                    filter["_id"] = new ObjectId(req.user._id)
+                }
+                if (status) update["status"] = status
+                if (isBlocked) update["isBlocked"] = isBlocked == "true"
+
+            }
+
+            console.log(filter)
+
+            await User.updateOne(filter, {
                 $set: update
             })
 
@@ -185,4 +201,15 @@ export const updateProfile = (req, res, next) => {
         }
 
     });
+};
+
+
+export const getUsers = async (req, res, next) => {
+    try {
+        let users = await User.find({});
+        res.status(200).json({users: users})
+    } catch (ex) {
+        next(ex);
+    }
+
 };

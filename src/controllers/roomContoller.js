@@ -6,13 +6,17 @@ import Room from "src/models/Room";
 import Booking from "src/models/Booking";
 
 
-export const getRooms = async (req, res, next)=>{
-    try{
+export const getRooms = async (req, res, next) => {
+    try {
         const {type} = req.query
 
+        console.log(req.user.role)
+
         let filter = {}
-        if(type && type === "owner"){
-            filter["owner._id"] = new ObjectId(req.user._id)
+        if (type && type === "owner") {
+            if (req.user.role !== "ADMIN") {
+                filter["owner._id"] = new ObjectId(req.user._id)
+            }
         }
 
         let rooms = await Room.aggregate([
@@ -68,23 +72,23 @@ export const getRooms = async (req, res, next)=>{
 
         res.status(200).json({rooms: rooms});
 
-    } catch (ex){
+    } catch (ex) {
 
     }
 
 }
 
-export const getRoom = async (req, res, next)=>{
-    try{
+export const getRoom = async (req, res, next) => {
+    try {
         const {type, roomId} = req.query
         let filter = {}
-        if(roomId){
+        if (roomId) {
             filter["_id"] = new ObjectId(roomId)
         }
         let room = await Room.findOne(filter)
         res.status(200).json({room: room});
 
-    } catch (ex){
+    } catch (ex) {
 
     }
 
@@ -353,18 +357,112 @@ export const reserveRoom = async (req, res, next) => {
     }
 }
 
+export const getBookedRooms = async (req, res, next) => {
+    try {
+
+
+        let pipeline = []
+        if (req.user.role === "ADMIN") {
+
+            pipeline.push({
+                $lookup: {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "author"
+                }
+            })
+            pipeline.push({
+                $unwind: {path: "$author"}
+            })
+
+
+        } else {
+            pipeline.push({
+                $match: {
+                    userId: new ObjectId(req.user._id)
+                }
+            })
+        }
+
+
+        const bookings = await Booking.aggregate([
+            ...pipeline,
+            {
+                $lookup: {
+                    from: "rooms",
+                    localField: "roomId",
+                    foreignField: "_id",
+                    as: "room"
+                }
+            },
+            {
+                $unwind: {path: "$room"}
+            },
+            {
+                $project: {
+                    "author.password": 0,
+                    "author.email": 0,
+                    "author.role": 0,
+                    "author.isBlocked": 0,
+                    "author.status": 0
+                }
+            }
+
+        ])
+
+        res.status(200).json({bookings: bookings});
+
+    } catch (ex) {
+        next(ex)
+    }
+}
+
+
+export const cancelBookingRoom = async (req, res, next) => {
+    const {bookingId} = req.body
+    if (!bookingId) return next("Please provide booking Id");
+    try {
+
+        const result = await Booking.updateOne(
+            {
+                _id: new ObjectId(bookingId),
+                userId: new ObjectId(req.user._id)
+            },
+            {$set: {status: 'cancelled'}}
+        );
+
+        res.status(201).json({
+            booking: {
+                status: 'cancelled'
+            }
+        });
+
+    } catch (ex) {
+        next(ex)
+    }
+}
+
 
 // user can check their booked room by their email, room number or reserve id
 export const checkInReserve = async (req, res, next) => {
+    const {bookingId} = req.body
+    if (!bookingId) return next("Please provide booking Id");
     try {
-        const {
-            startDate,
-            endDate,
-            roomId
-        } = req.body
 
+        const result = await Booking.updateOne(
+            {
+                _id: new ObjectId(bookingId),
+                userId: new ObjectId(req.user._id)
+            },
+            {$set: {status: 'checked-in'}}
+        );
 
-        res.status(200).json({rooms: rooms});
+        res.status(201).json({
+            booking: {
+                status: 'checked-in'
+            }
+        });
 
     } catch (ex) {
         next(ex)
@@ -373,15 +471,32 @@ export const checkInReserve = async (req, res, next) => {
 
 
 // when guest leave their room.
-// then it's mandatory to checkOut unless pay for next day
+// then it's mandatory to check out unless pay for next day
 export const checkOutReserve = async (req, res, next) => {
+    const {bookingId} = req.body
+    if (!bookingId) return next("Please provide booking Id");
     try {
-        const {
-            reserveId
-        } = req.body
+        let booked = await Booking.findOne({
+            _id: new ObjectId(bookingId),
+            userId: new ObjectId(req.user._id),
+            status: {$in: ["checked-in", "confirmed"]}
+        })
 
+        if (!booked) return next("Sorry, this room already canceled or check outed")
 
-        res.status(200).json({rooms: rooms});
+        const result = await Booking.updateOne(
+            {
+                _id: new ObjectId(bookingId),
+                userId: new ObjectId(req.user._id)
+            },
+            {$set: {status: 'checked-out'}}
+        );
+
+        res.status(201).json({
+            booking: {
+                status: 'checked-out'
+            }
+        });
 
     } catch (ex) {
         next(ex)

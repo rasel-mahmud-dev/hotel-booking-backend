@@ -7,7 +7,8 @@ import {
     createRoom,
     filterRooms,
     reserveRoom,
-    getRoom
+    getRoom,
+    getBookedRooms, cancelBookingRoom
 } from "src/controllers/roomContoller";
 
 const router = require("express").Router();
@@ -25,13 +26,20 @@ router.post("/filter",  requiredAuth, filterRooms);
 // confirm reserve/book room  
 router.post("/reserve", requiredAuth, reserveRoom);
 
+//get booked rooms
+router.get("/booked", requiredAuth, getBookedRooms);
+
 // user can check their booked room by their email, room number or reserve id
 router.post("/checkIn", requiredAuth, checkInReserve);
 
 
 // when guest leave their room. 
 // then it's mandatory to check out unless pay for next day
-router.post("/checkOut", requiredAuth, checkOutReserve);
+router.post("/booked-checkOut", requiredAuth, checkOutReserve);
+
+
+// cancel booking room
+router.post("/cancel-booking", requiredAuth, cancelBookingRoom);
 
 
 export default router

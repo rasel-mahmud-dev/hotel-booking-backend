@@ -117,7 +117,11 @@ export const getAllHotel = async (req, res, next) => {
 
 export const getOwnerHotel = async (req, res, next) => {
     try {
-        const hotel = await Hotel.find({ownerId: new ObjectId(req.user._id)})
+        const filter = {}
+        if (req.user.role !== "ADMIN") {
+            filter["ownerId"] = new ObjectId(req.user._id)
+        }
+        const hotel = await Hotel.find(filter)
         res.status(200).json({hotel: hotel, authId: req.user._id});
     } catch (ex) {
         next(ex);
