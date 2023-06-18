@@ -6,6 +6,90 @@ import Room from "src/models/Room";
 import Booking from "src/models/Booking";
 
 
+export const getRooms = async (req, res, next)=>{
+    try{
+        const {type} = req.query
+
+        let filter = {}
+        if(type && type === "owner"){
+            filter["owner._id"] = new ObjectId(req.user._id)
+        }
+
+        let rooms = await Room.aggregate([
+            {
+                $lookup: {
+                    from: "hotels",
+                    localField: "hotelId",
+                    foreignField: "_id",
+                    as: "hotel"
+                }
+            },
+            {
+                $unwind: {path: "$hotel"}
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "hotel.ownerId",
+                    foreignField: "_id",
+                    as: "owner"
+                }
+            },
+            {
+                $unwind: {path: "$owner"}
+            },
+            {
+                $match: filter
+            },
+            {
+                $project: {
+                    _id: 1,
+                    roomName: 1,
+                    hotelId: 1,
+                    roomNo: 1,
+                    image: 1,
+                    description: 1,
+                    price: 1,
+                    roomType: 1,
+                    capacity: 1,
+                    hotel: {
+                        name: 1,
+                        address: 1,
+                        image: 1
+                    },
+                    owner: {
+                        fullName: 1,
+                        avatar: 1
+                    }
+                }
+            }
+        ])
+
+
+        res.status(200).json({rooms: rooms});
+
+    } catch (ex){
+
+    }
+
+}
+
+export const getRoom = async (req, res, next)=>{
+    try{
+        const {type, roomId} = req.query
+        let filter = {}
+        if(roomId){
+            filter["_id"] = new ObjectId(roomId)
+        }
+        let room = await Room.findOne(filter)
+        res.status(200).json({room: room});
+
+    } catch (ex){
+
+    }
+
+}
+
 export const createRoom = (req, res, next) => {
 
     // parse a file upload
@@ -95,7 +179,6 @@ export const filterRooms = async (req, res, next) => {
 
         checkInDate = new Date(checkInDate)
         checkOutDate = new Date(checkOutDate)
-
 
         let filter = []
 

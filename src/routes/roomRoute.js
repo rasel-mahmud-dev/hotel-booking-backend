@@ -1,12 +1,25 @@
 import requiredAuth from "src/middewares/requiredAuth";
 import requiredRoles from "src/middewares/requiredRoles";
-import {checkInReserve, checkOutReserve, createRoom, filterRooms, reserveRoom} from "src/controllers/roomContoller";
+import {
+    getRooms,
+    checkInReserve,
+    checkOutReserve,
+    createRoom,
+    filterRooms,
+    reserveRoom,
+    getRoom
+} from "src/controllers/roomContoller";
 
 const router = require("express").Router();
 
+
+router.get("/", requiredAuth, getRooms);
+
+router.get("/detail", requiredAuth, getRoom);
+
 // only admin and hotel owner can add room
 router.post("/create", requiredAuth, requiredRoles(["ADMIN", "HOTEL_OWNER"]), createRoom);
-router.post("/filter",  filterRooms);
+router.post("/filter",  requiredAuth, filterRooms);
 
 
 // confirm reserve/book room  

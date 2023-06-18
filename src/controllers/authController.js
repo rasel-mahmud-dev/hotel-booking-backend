@@ -48,7 +48,7 @@ export const createNewUser = (req, res, next) => {
                 firstName,
                 lastName,
                 email,
-                role="USER",
+                role = "USER",
                 password,
             } = fields;
 
@@ -133,4 +133,56 @@ export const authLoad = async (req, res, next) => {
 }
 
 
+export const updateProfile = (req, res, next) => {
 
+    // parse a file upload
+    const form = formidable({multiples: false});
+
+    form.parse(req, async (err, fields, files) => {
+        if (err) return next("Can't read form data");
+        try {
+            const {
+                avatar,
+            } = fields;
+
+            let user = await User.findOne({_id: new ObjectId(req.user._id)});
+            if (!user) {
+                return res.status(404).json({message: "User not found"});
+            }
+
+            let update = {}
+            let errorMessage = ""
+            if (avatar) update["avatar"] = avatar
+            const newPhotos = []
+
+
+            if (files && files.avatar) {
+                let fileName = `${files.avatar.newFilename}-${files.avatar.originalFilename}`
+                let result = await imageKitUpload(files.avatar.filepath, fileName, "hotel-booking")
+                if (result) {
+                    update["avatar"] = result.url
+                    newPhotos.push(result.url)
+                } else {
+                    errorMessage = "Avatar upload fail"
+                }
+            }
+
+
+            if (errorMessage) {
+                return next(errorMessage)
+            }
+
+            await User.updateOne({
+                _id: new ObjectId(req.user._id)
+            }, {
+                $set: update
+            })
+
+            res.status(201).json({user: update});
+
+        } catch (ex) {
+            next(ex);
+        }
+
+    });
+};
